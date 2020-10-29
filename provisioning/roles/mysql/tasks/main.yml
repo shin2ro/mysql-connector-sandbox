@@ -1,0 +1,33 @@
+- name: install mysql
+  become: true
+  apt:
+    name:
+      - mysql-server
+      - mysql-client
+    update_cache: yes
+
+- block:
+    - name: create database
+      command: mysql -e "create database if not exists {{ db_name }}"
+
+    - name: create user
+      command: mysql -e "create user if not exists '{{ db_user }}'@'%' identified by '{{ db_password }}';"
+
+    - name: assign privileges
+      command: mysql -e "grant all on *.* to '{{ db_user }}'@'%';"
+
+  become: true
+  when: db_name is defined and db_user is defined and db_password is defined
+
+- block:
+    - name: add mysql config
+      template:
+        src: mysqld.cnf.j2
+        dest: /etc/mysql/mysql.conf.d/mysqld.cnf
+
+    - name: restart mysql
+      systemd:
+        name: mysql
+        state: restarted
+
+  become: true
